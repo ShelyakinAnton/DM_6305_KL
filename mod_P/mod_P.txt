@@ -254,7 +254,7 @@ POLINOMIAL NMR_P_P (POLINOMIAL p, POLINOMIAL r)
 			do
 			{
 				p = DIV_PP_P (p, L);
-			} while (!(GCF_PP_P(p, L), L));
+			} while (!COM_PP_I(GCF_PP_P(p, L), L));
 		}
 	}
 	return p;
@@ -282,4 +282,20 @@ int COM_QQ_I (RATIONAL q1, RATIONAL q2)
 	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 1 && q1.numerator.sgn == 0) return 2;
 	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 1 && q1.numerator.sgn == 1) return 1;
 	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 0) return 0;
+}
+
+int COM_PP_I (POLINOMIAL p1, POLINOMIAL p2)
+{
+	int i;
+	int comRes;
+	if (p1.m == p2.m)
+	{
+		for (i = 0; i < p1.m; i++)
+		{
+			comRes = COM_QQ_I (p1.koefP[i], p2.koefP[i]);
+			if (!comRes) continue;
+			return 1;//not equal
+		}
+		return 0; //equal
+	}
 }
