@@ -1,5 +1,9 @@
 #include <gear.h>
 #include <DMdatatypes.h>
+//собственные функции, разработанные для поддержания работы нескольких других функций
+RATIONAL POWER_Q (RATIONAL, int)
+int COM_QQ_I (RATIONAL, RATIONAL)
+int COM_PP_I (POLINOMIAL, POLINOMIAL)
 
 POLINOMIAL ADD_PP_P (POLINOMIAL p1, POLINOMIAL p2)
 {
@@ -167,7 +171,7 @@ POLINOMIAL MOD_PP_P (POLINOMIAL p1, POLINOMIAL p2)
 	div = DIV_PP_P(p1, p2);
 	int_part = MUL_PP_P(div, p2);
 	quotient = SUB_PP_P(p1, int_part);
-	for (i = quotient.m; i > 0 && quotient.koefP[i].numerator.koef[p1.koefP[i].numerator.num] == 0; i--)
+	for (i = quotient.m; i > 0 && quotient.koefP[i].numerator.koef[p1.koefP[i].numerator.num - 1] == 0; i--)
 	{
 		quotient.m--;
 	}
@@ -177,13 +181,13 @@ POLINOMIAL MOD_PP_P (POLINOMIAL p1, POLINOMIAL p2)
 POLINOMIAL GCF_PP_P (POLINOMIAL p1, POLINOMIAL p2)
 {
 	POLINOMIAL temp;
-	if ( ( ( DEG_P_N(p1) < DEG_P_N (p2) ) || ( ( DEG_P_N(p1) == DEG_P_N (p2) && p1.koefP[p1.m] < p2.koefP[p2.m] ) ) ) )
+	if ( ( ( DEG_P_N(p1) < DEG_P_N (p2) ) || ( ( DEG_P_N(p1) == DEG_P_N (p2) && COM_QQ_I (p1.koefP[p1.m], p2.koefP[p2.m]) == 1 ) ) ) )
 	{
 		temp = p1;
 		p1 = p2;
 		p2 = temp;
 	}
-	while (DEG_P_N(p2) != 0 || p2.koefP[0].numerator.koef[p2.koefP[0].numerator.num] != 0)
+	while (DEG_P_N(p2) != 0 || p2.koefP[0].numerator.koef[p2.koefP[0].numerator.num - 1] != 0)
 	{
 		temp = p2;
 		p2 = MOD_PP_P(p1, p2);
@@ -195,13 +199,20 @@ POLINOMIAL GCF_PP_P (POLINOMIAL p1, POLINOMIAL p2)
 POLINOMIAL DER_P_P (POLINOMIAL p)
 {
 	int i, j;
+	RATIONAL I, ONE;
+	ONE.numerator.num = 1;
+	ONE.denominator.num = 1;
+	ONE.numerator.sgn = 0;
+	ONE.numerator.koef = malloc(4);
+	ONE.denominator.koef = malloc(4);
+	ONE.denominator.koef[0] = 1;
+	ONE.numerator.koef[0] = 1;
+	I = SUB_QQ_Q (ONE, ONE);
 	POLINOMIAL temp;
 	for (i = 0; i <= p.m; i++)
 	{
-		for (j = 0; j < p.koefP[i].numerator.num; j++)
-		{
-			p.koefP[i].numerator.koef[j] *= i;
-		}
+		p.koefP[i] = MUL_QQ_Q(p.koefP[i], I);
+		I = ADD_QQ_Q (I, ONE);
 	}
 	temp = p;
 	p.m--;
@@ -222,6 +233,7 @@ POLINOMIAL NMR_P_P (POLINOMIAL p, POLINOMIAL r)
 	df = DER_P_P(p);
 	for (i = 0; i < r.m; i++)
 	{
+		sum.numerator.sgn = 0;
 		sum.numerator.koef = malloc(4);
 		sum.numerator.koef[0] = 0;
 		sum.numerator.num = 1;
@@ -230,7 +242,7 @@ POLINOMIAL NMR_P_P (POLINOMIAL p, POLINOMIAL r)
 		sum.denominator.num = 1;
 		for (j = df.m; j >= 0; j--)
 		{
-			sum = ADD_QQ_Q(sum, df.koefP[j] * power(r.koefP[i], j));
+			sum = ADD_QQ_Q(sum, df.koefP[j] * POWER_Q(r.koefP[i], j));
 		}
 		L.m = 1;
 		L.koefP = malloc (sizeof(RATIONAL) * (L.m + 1));
@@ -242,7 +254,7 @@ POLINOMIAL NMR_P_P (POLINOMIAL p, POLINOMIAL r)
 			do
 			{
 				p = DIV_PP_P (p, L);
-			} while (GCF_PP_P(p, L) == L);
+			} while (!(GCF_PP_P(p, L), L));
 		}
 	}
 	return p;
@@ -256,4 +268,18 @@ RATIONAL POWER_Q (RATIONAL q, int power)
 		q = MUL_QQ_Q(q, q);
 	}
 	return q;
+}
+
+int COM_QQ_I (RATIONAL q1, RATIONAL q2)
+{
+	INTEGER res1, res2;
+	if (q1.numerator.sgn > q2.numerator.sgn) return 1;//2nd is larger
+	if (q1.numerator.sgn < q2.numerator.sgn) return 2;//1st is larger
+	res1 = MUL_ZZ_Z (TRANS_N_Z(q2.denominator), q1.numerator);
+	res2 = MUL_ZZ_Z (TRANS_N_Z(q1.denominator), q2.numerator);
+	if ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 2 && q1.numerator.sgn == 0) return 1;
+	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 2 && q1.numerator.sgn == 1) return 2;
+	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 1 && q1.numerator.sgn == 0) return 2;
+	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 1 && q1.numerator.sgn == 1) return 1;
+	elif ( COM_NN_D( ABS_Z_N(res1), ABS_Z_N(res2) ) == 0) return 0;
 }
